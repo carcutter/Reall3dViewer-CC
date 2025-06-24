@@ -19,7 +19,6 @@ import {
     Information,
     IsDebugMode,
     KeyActionCheckAndExecute,
-    MapCreateCamera,
     MapCreateControls,
     MapCreateDirLight,
     MapCreateRenderer,
@@ -42,11 +41,11 @@ import { setupRaycaster } from '../raycaster/SetupRaycaster';
 import { setupMark } from '../meshs/mark/SetupMark';
 import { CSS3DRenderer } from 'three/examples/jsm/Addons.js';
 import { WarpSplatMesh } from './warpsplatmesh/WarpSplatMesh';
-import { ViewerVersion } from '../utils/consts/GlobalConstants';
+import { isMobile, ViewerVersion } from '../utils/consts/GlobalConstants';
 import * as tt from '@gotoeasy/three-tile';
 
 /**
- * 地图渲染器
+ * Built-in Map viewer with Gaussian Splatting model support
  */
 export class Reall3dMapViewer extends EventDispatcher<tt.plugin.GLViewerEventMap> {
     public scene: Scene;
@@ -82,7 +81,7 @@ export class Reall3dMapViewer extends EventDispatcher<tt.plugin.GLViewerEventMap
         setupMapUtils(events);
         setupRaycaster(events);
 
-        that.camera = new PerspectiveCamera(60, 1, 0.01, 10000);
+        that.camera = new PerspectiveCamera(60, 1, 0.01, 100);
         on(GetCamera, () => that.camera);
 
         that.container = opts.root as HTMLElement;
@@ -102,6 +101,8 @@ export class Reall3dMapViewer extends EventDispatcher<tt.plugin.GLViewerEventMap
         window.addEventListener('resize', that.resize.bind(that));
         that.resize();
         that.renderer.setAnimationLoop(that.animate.bind(that));
+        // @ts-ignore
+        isMobile && that.controls._dollyOut?.(0.75); // 手机适当缩小
 
         on(ViewerDispose, () => that.dispose());
 
@@ -115,6 +116,20 @@ export class Reall3dMapViewer extends EventDispatcher<tt.plugin.GLViewerEventMap
             },
             true,
         );
+
+        on(
+            OnViewerUpdate,
+            () => {
+                that.tileMap.update(that.camera);
+                try {
+                    that.renderer.render(that.scene, that.camera);
+                } catch (e) {
+                    console.warn(e.message);
+                }
+            },
+            true,
+        );
+
         on(
             OnViewerAfterUpdate,
             () => {
@@ -130,19 +145,6 @@ export class Reall3dMapViewer extends EventDispatcher<tt.plugin.GLViewerEventMap
                         lookAt: fire(Vector3ToString, fire(GetCameraLookAt)),
                         lookUp: fire(Vector3ToString, fire(GetCameraLookUp)),
                     });
-            },
-            true,
-        );
-
-        on(
-            OnViewerUpdate,
-            () => {
-                that.tileMap.update(that.camera);
-                try {
-                    that.renderer.render(that.scene, that.camera);
-                } catch (e) {
-                    console.warn(e.message);
-                }
             },
             true,
         );
@@ -230,6 +232,8 @@ export class Reall3dMapViewer extends EventDispatcher<tt.plugin.GLViewerEventMap
         that.clock = null;
         that.events = null;
         that.tileMap = null;
+
+        document.querySelector('#gsviewer .debug.dev-panel')?.classList?.remove('map');
     }
 }
 

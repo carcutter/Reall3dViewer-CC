@@ -51,7 +51,7 @@ export function setupMapUtils(events: Events) {
     const on = (key: number, fn?: Function, multiFn?: boolean): Function | Function[] => events.on(key, fn, multiFn);
     const fire = (key: number, ...args: any): any => events.fire(key, ...args);
 
-    const MaxActiveCount: number = isMobile ? 1 : 20;
+    const MaxActiveCount: number = isMobile ? 2 : 20;
 
     const fpsMap: Map<number, any> = new Map();
     const fpsRealMap: Map<number, any> = new Map();
@@ -78,6 +78,9 @@ export function setupMapUtils(events: Events) {
             child.isWarpSplatMesh && (child as WarpSplatMesh).splatMesh?.visible && warpMeshs.push(child);
         });
         warpMeshs.sort((a, b) => camera.position.distanceTo(a.position) - camera.position.distanceTo(b.position));
+        for (let i = 0; i < warpMeshs.length; i++) {
+            warpMeshs[i].splatMesh.boundBox.visible = i < 1;
+        }
         window['splat'] = warpMeshs[0]?.splatMesh;
         return warpMeshs[0]?.splatMesh;
     });
@@ -170,8 +173,9 @@ export function setupMapUtils(events: Events) {
     });
 
     on(MapCreateScene, () => {
+        const opts: Reall3dMapViewerOptions = fire(GetOptions);
         const scene = new Scene();
-        const backColor = 0xdbf0ff;
+        const backColor = opts.background || '#dbf0ff';
         scene.background = new Color(backColor);
         scene.fog = new FogExp2(backColor, 0);
         on(GetScene, () => scene);
@@ -186,20 +190,22 @@ export function setupMapUtils(events: Events) {
         const controls = new MapControls(fire(GetCamera), opts.root as HTMLElement);
         controls.screenSpacePanning = false;
         controls.minDistance = 0.1;
-        controls.maxDistance = 100000;
+        controls.maxDistance = 60000;
         controls.maxPolarAngle = 1.2;
         controls.enableDamping = true;
         controls.dampingFactor = 0.07;
         controls.zoomToCursor = true;
-        // controls.minAzimuthAngle = 0;
-        // controls.maxAzimuthAngle = 0;
+
+        const minPan = new Vector3().fromArray(opts.minPan || [-20000, 0.1, -60000]);
+        const maxPan = new Vector3().fromArray(opts.maxPan || [50000, 10000, 0]);
+        const _v = new Vector3();
 
         controls.addEventListener('change', () => {
             const polar = Math.max(controls.getPolarAngle(), 0.1); // camera polar
             const dist = Math.max(controls.getDistance(), 0.1); // dist of camera to controls
             controls.zoomSpeed = Math.max(Math.log(dist), 0) + 0.5; // set zoom speed on dist
 
-            camera.far = MathUtils.clamp((dist / polar) * 8, 100, 200000); // set far and near on dist/polar
+            camera.far = MathUtils.clamp((dist / polar) * 8, 100, 100000); // set far and near on dist/polar
             camera.near = camera.far / 1000;
             camera.updateProjectionMatrix();
 
@@ -207,6 +213,11 @@ export function setupMapUtils(events: Events) {
                 scene.fog.density = (polar / (dist + 5)) * fogFactor * 0.25; // set fog density on dist/polar
             }
             controls.maxPolarAngle = Math.min(Math.pow(10000 / dist, 4), 1.2); // limit the max polar on dist
+
+            _v.copy(controls.target);
+            controls.target.clamp(minPan, maxPan);
+            _v.sub(controls.target);
+            camera.position.sub(_v);
         });
 
         on(GetControls, () => controls);

@@ -48,6 +48,7 @@ import {
     OnViewerUpdate,
     FocusAabbCenter,
     GetAabbCenter,
+    FlySavePositions,
 } from './EventConstants';
 import { Reall3dViewerOptions } from '../viewer/Reall3dViewerOptions';
 import { SplatMesh } from '../meshs/splatmesh/SplatMesh';
@@ -169,6 +170,7 @@ export function setupEventListener(events: Events) {
             fire(ClearFlyPosition);
             keySet.clear();
         } else if (keySet.has('KeyY')) {
+            fire(FlySavePositions, false);
             fire(MetaSaveSmallSceneCameraInfo);
             keySet.clear();
         } else if (keySet.has('KeyI')) {
@@ -187,7 +189,7 @@ export function setupEventListener(events: Events) {
         if (mouseState.move) return; // 鼠标有移动时忽略
         const rs: Vector3[] = await fire(RaycasterRayIntersectPoints, x, y);
         if (rs.length) {
-            fire(CameraSetLookAt, rs[0], true);
+            fire(CameraSetLookAt, rs[0], true, false); // 最后参数false时平移效果，true时旋转效果
         }
     });
 

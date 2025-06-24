@@ -2,6 +2,7 @@
 // Copyright (c) 2025 reall3d.com, MIT license
 // ==============================================
 import { PerspectiveCamera, Vector3, WebGLRenderer } from 'three';
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { Events } from '../events/Events';
 import {
     ComputeFps,
@@ -21,9 +22,15 @@ import {
     GetCameraPosition,
     GetCameraLookAt,
     GetCameraLookUp,
+    GetScene,
+    ViewerNeedUpdate,
+    Flying,
+    OnFetchStop,
+    OnLoadAndRenderObj,
 } from '../events/EventConstants';
 import { SplatMeshOptions } from '../meshs/splatmesh/SplatMeshOptions';
 import { Reall3dViewerOptions } from '../viewer/Reall3dViewerOptions';
+import { loadFile } from '../modeldata/loaders/FileLoader';
 
 export function setupViewerUtils(events: Events) {
     let disposed: boolean = false;
@@ -80,6 +87,18 @@ export function setupViewerUtils(events: Events) {
     });
 
     window.addEventListener('beforeunload', () => fire(ViewerDispose));
+
+    on(OnLoadAndRenderObj, async (url: string) => {
+        fire(Information, { scene: `small (obj)` });
+        const datas = await loadFile(url, events);
+        if (datas) {
+            const url = URL.createObjectURL(new Blob([datas], { type: 'application/octet-stream' }));
+            new OBJLoader().load(url, object => fire(GetScene).add(object));
+            fire(ViewerNeedUpdate, true);
+            fire(Flying, true);
+        }
+        fire(OnFetchStop, 0);
+    });
 }
 
 export function initSplatMeshOptions(options: SplatMeshOptions): SplatMeshOptions {
@@ -91,6 +110,11 @@ export function initSplatMeshOptions(options: SplatMeshOptions): SplatMeshOption
     opts.lightFactor ??= 1.0;
     opts.name ??= '';
     opts.showWatermark ??= true;
+    opts.shDegree ??= 0;
+    opts.depthTest ??= true;
+    opts.debugMode ??= false;
+    opts.maxRenderCountOfMobile ??= opts.bigSceneMode ? 256 * 10000 : (256 + 128) * 10240;
+    opts.maxRenderCountOfPc ??= opts.bigSceneMode ? (256 + 64) * 10000 : (256 + 128) * 10000;
 
     return opts;
 }
@@ -114,13 +138,13 @@ export function initGsViewerOptions(options: Reall3dViewerOptions): Reall3dViewe
     opts.bigSceneMode ??= false;
     opts.pointcloudMode ??= !opts.bigSceneMode; // 小场景默认点云模式，大场景默认正常模式
     opts.lightFactor ??= 1.1;
-    opts.maxRenderCountOfMobile ??= opts.bigSceneMode ? 256 * 10000 : (256 + 128) * 10240;
-    opts.maxRenderCountOfPc ??= opts.bigSceneMode ? (256 + 64) * 10000 : (256 + 128) * 10000;
     opts.debugMode ??= location.protocol === 'http:' || /^test\./.test(location.host); // 生产环境不开启
     opts.markMode ??= false;
     opts.markVisible ??= true;
     opts.meterScale ??= 1;
     opts.background ??= '#000000';
+    opts.minDistance ??= 0.1;
+    opts.maxDistance ??= 1000;
 
     return opts;
 }

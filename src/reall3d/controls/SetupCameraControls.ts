@@ -12,14 +12,16 @@ import {
     ControlsUpdateRotateAxis,
     IsCameraChangedNeedUpdate,
     CameraSetLookAt,
-    FocusMarkerMeshUpdate,
+    FocusMarkerUpdate,
     RunLoopByFrame,
     ControlPlaneUpdate,
+    FocusMarkerAutoDisappear,
 } from '../events/EventConstants';
 import { PerspectiveCamera, Vector3 } from 'three';
 import { Events } from '../events/Events';
 import { GetCamera } from '../events/EventConstants';
 import { CameraControls } from './CameraControls';
+import { OrbitControls } from 'three/examples/jsm/Addons.js';
 
 /**
  * 相机参数信息
@@ -65,28 +67,57 @@ export function setupCameraControls(events: Events) {
     const on = (key: number, fn?: Function, multiFn?: boolean): Function | Function[] => events.on(key, fn, multiFn);
     const fire = (key: number, ...args: any): any => events.fire(key, ...args);
 
+    const controls: OrbitControls = fire(GetControls);
     on(GetCameraFov, () => fire(GetCamera).fov);
-    on(GetCameraPosition, (copy: boolean = false) => (copy ? fire(GetCamera).position.clone() : fire(GetCamera).position));
-    on(GetCameraLookAt, (copy: boolean = false) => (copy ? fire(GetControls).target.clone() : fire(GetControls).target));
+    on(GetCameraPosition, (copy: boolean = false) => (copy ? controls.object.position.clone() : controls.object.position));
+    on(GetCameraLookAt, (copy: boolean = false) => (copy ? controls.target.clone() : controls.target));
     on(GetCameraLookUp, (copy: boolean = false) => (copy ? fire(GetCamera).up.clone() : fire(GetCamera).up));
-    on(CameraSetLookAt, (target: Vector3, animate: boolean = false) => {
-        fire(FocusMarkerMeshUpdate, target);
+
+    let oEnables: any;
+    const aryProcessAnimate: any[] = [];
+    on(CameraSetLookAt, (target: Vector3, animate: boolean = false, rotateAnimate: boolean) => {
+        fire(FocusMarkerUpdate, target);
         if (!animate) {
-            fire(GetControls).target.copy(target);
+            controls.target.copy(target);
+            const direction = new Vector3().subVectors(target, controls.object.position);
+            direction.length() < 1 && controls.object.position.copy(target).sub(direction.setLength(1));
+            direction.length() > 50 && controls.object.position.copy(target).sub(direction.setLength(50));
             fire(ControlPlaneUpdate);
+            fire(FocusMarkerAutoDisappear);
             return;
         }
 
-        const start: Vector3 = fire(GetControls).target.clone();
-        let alpha = 0;
+        while (aryProcessAnimate.length) aryProcessAnimate.pop().stop = true;
+        let process = { alpha: 0, time: Date.now(), stop: false };
+        aryProcessAnimate.push(process);
+
+        // 适当时间内禁用拖动旋转避免操作冲突
+        oEnables = oEnables || { enablePan: controls.enablePan, enableRotate: controls.enableRotate };
+        controls.enablePan = false;
+        controls.enableRotate = false;
+
+        const oldTarget: Vector3 = fire(GetCameraLookAt, true);
+        const oldPos: Vector3 = fire(GetCameraPosition, true);
+        const dir = oldTarget.clone().sub(oldPos).normalize();
+        const newPos = target.clone().sub(dir.multiplyScalar(target.clone().sub(oldPos).dot(dir)));
+
         fire(
             RunLoopByFrame,
             () => {
-                alpha += 0.03;
-                fire(GetControls).target.copy(start.clone().lerp(target, alpha));
+                process.alpha = (Date.now() - process.time) / 600;
+                fire(GetControls).target.copy(oldTarget.clone().lerp(target, process.alpha));
+                !rotateAnimate && fire(GetControls).object.position.copy(oldPos.clone().lerp(newPos, process.alpha));
                 fire(ControlPlaneUpdate);
+                if (process.alpha >= 0.9) {
+                    controls.enablePan = oEnables.enablePan;
+                    controls.enableRotate = oEnables.enableRotate;
+                }
+                if (process.alpha >= 1) {
+                    process.stop = true;
+                    fire(FocusMarkerAutoDisappear);
+                }
             },
-            () => alpha < 1,
+            () => !process.stop,
         );
     });
 

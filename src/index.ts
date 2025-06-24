@@ -91,7 +91,7 @@ function fnClick(className: string) {
         mapViewer?.dispose();
         viewer = viewer || new Reall3dViewer({ debugMode: true, maxRenderCountOfPc, shDegree });
         viewer.reset({ debugMode: true });
-        setTimeout(() => viewer.addModel(`https://reall3d.com/demo-models/yz.meta.json`), 50); // Let it GC
+        setTimeout(() => viewer.addModel(`https://reall3d.com/demo-models/yz.spx`), 50); // Let it GC
     } else if (className == 'demo2') {
         viewer?.dispose();
         mapViewer?.dispose();
@@ -110,9 +110,12 @@ function fnClick(className: string) {
         viewer = viewer || new Reall3dViewer({ debugMode: true, maxRenderCountOfPc, shDegree });
         viewer.reset({ debugMode: true });
         setTimeout(() => viewer.addModel(`https://reall3d.com/demo-models/bzg.spx`), 50); // Let it GC
-    } else if (className == 'big-lod') {
-        // TODO 大场景LOD，重构改进使用spx
-        // setTimeout(() => viewer.addScene(`https://reall3d.com/demo-models/lod-demo-spx.scene.json`), 50); // Let it GC
+    } else if (className == 'ppt') {
+        viewer?.dispose();
+        mapViewer?.dispose();
+        viewer = viewer || new Reall3dViewer({ debugMode: true, maxRenderCountOfPc, shDegree });
+        viewer.reset({ debugMode: true });
+        setTimeout(() => viewer.addModel(`https://reall3d.com/demo-models/ppt.spx`), 50); // Let it GC
     } else if (className == 'switch-rotate') {
         let opts: Reall3dViewerOptions = viewer?.options();
         viewer?.options({ autoRotate: !opts.autoRotate });
@@ -167,6 +170,7 @@ function fnClick(className: string) {
         viewer?.dispose();
         mapViewer?.dispose();
         viewer = null;
+        document.querySelector('.debug.dev-panel')?.classList?.add('map');
         document.querySelector('#map')?.classList?.remove('hidden');
         mapViewer = new Reall3dMapViewer({ debugMode: true });
         mapViewer.addScenes('https://reall3d.com/demo-models/map/00.scenes.json');
