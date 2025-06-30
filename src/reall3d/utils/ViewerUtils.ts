@@ -139,7 +139,7 @@ export function initGsViewerOptions(options: Reall3dViewerOptions): Reall3dViewe
     opts.pointcloudMode ??= !opts.bigSceneMode; // 小场景默认点云模式，大场景默认正常模式
     opts.lightFactor ??= 1.1;
     opts.debugMode ??= location.protocol === 'http:' || /^test\./.test(location.host); // 生产环境不开启
-    opts.markMode ??= false;
+    opts.markMode ??= true;
     opts.markVisible ??= true;
     opts.meterScale ??= 1;
     opts.background ??= '#000000';
@@ -183,6 +183,7 @@ export function initCamera(opts: Reall3dViewerOptions): PerspectiveCamera {
     if (!camera) {
         const canvas: HTMLCanvasElement = opts.renderer.domElement;
         const aspect = canvas.width / canvas.height;
+    
         let lookUp: Vector3 = new Vector3().fromArray(opts.lookUp);
         let lookAt: Vector3 = new Vector3().fromArray(opts.lookAt);
         let position = new Vector3().fromArray(opts.position);

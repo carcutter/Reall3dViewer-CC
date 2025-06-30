@@ -1,7 +1,7 @@
 // ==============================================
 // Copyright (c) 2025 reall3d.com, MIT license
 // ==============================================
-import { Group, Vector3 } from 'three';
+import { Group, Vector3, Plane} from 'three';
 import { CSS3DSprite } from 'three/examples/jsm/Addons.js';
 import { Events } from '../../events/Events';
 import {
@@ -13,9 +13,12 @@ import {
     StopAutoRotate,
     TraverseDisposeAndClear,
     ViewerNeedUpdate,
+    GetCameraPosition,
+    GetCameraLookAt,
 } from '../../events/EventConstants';
 import { MarkData } from './data/MarkData';
 import { MarkDataSinglePoint } from './data/MarkDataSinglePoint';
+import { initCamera } from '../../utils/ViewerUtils';
 
 export class MarkSinglePoint extends Group {
     public readonly isMark: boolean = true;
@@ -24,25 +27,26 @@ export class MarkSinglePoint extends Group {
     private data: MarkDataSinglePoint;
     private css3dTag: CSS3DSprite;
 
-    constructor(events: Events, obj: Vector3 | MarkDataSinglePoint, name?: string) {
+    constructor(events: Events, obj: Vector3 | MarkDataSinglePoint, name?: string, titleOverwrite?: string) {
         super();
         this.events = events;
         const that = this;
 
         let data: MarkDataSinglePoint;
         if (obj instanceof Vector3) {
+            
             const cnt: number = document.querySelectorAll('.mark-wrap-point').length + 1;
             data = {
                 type: 'MarkSinglePoint',
                 name: name || 'point' + Date.now(),
                 point: obj.toArray(),
-                iconName: '#svgicon-point2',
+                iconName: '#svgicon-hotspot',
                 iconColor: '#eeee00',
                 iconOpacity: 0.8,
                 mainTagColor: '#c4c4c4',
                 mainTagBackground: '#2E2E30',
                 mainTagOpacity: 0.8,
-                title: 'hotspot:' + cnt,
+                title: titleOverwrite || 'hotspot:' + cnt,
                 note: 'This is a test. ',
             };
         } else {
@@ -61,9 +65,14 @@ export class MarkSinglePoint extends Group {
             };
         }
 
+        that.onBeforeRender = () => {
+            that.updateVisibility();
+        };
+
+
         const tagWarp: HTMLDivElement = document.createElement('div');
         tagWarp.innerHTML = `<div style='flex-direction: column;align-items: center;display: flex;pointer-events: none;margin-bottom: 40px;'>
-                                <span class="${data.name}" style="color:${data.mainTagColor};background:${data.mainTagBackground};opacity:${data.mainTagOpacity};padding:1px 5px 2px 5px;border-radius: 4px;margin-bottom: 5px;user-select: none;font-size: 12px;pointer-events: auto;">${data.title}</span>
+                                <span class="${data.name}" style="color:${data.mainTagColor};background:${data.mainTagBackground};opacity:${data.mainTagOpacity};padding:1px 5px 2px 5px;border-radius: 4px;margin-bottom: 5px;user-select: none;font-size: 6px;pointer-events: auto;">${data.title}</span>
                                 <svg height="20" width="20" style="color:${data.iconColor};opacity:${data.iconOpacity};"><use href="${data.iconName}" fill="currentColor" /></svg>
                              </div>`;
         tagWarp.classList.add('mark-wrap-point', `mark-wrap-${data.name}`);
@@ -83,13 +92,13 @@ export class MarkSinglePoint extends Group {
         css3dTag.position.set(data.point[0], data.point[1], data.point[2]);
         css3dTag.element.style.pointerEvents = 'none';
         css3dTag.scale.set(0.01, 0.01, 0.01);
-
+        
         that.data = data;
         that.css3dTag = css3dTag;
         that.add(css3dTag);
         events.fire(AddMarkToWeakRef, that);
     }
-
+    
     /**
      * 绘制更新
      */
@@ -181,5 +190,44 @@ export class MarkSinglePoint extends Group {
         that.events = null;
         that.data = null;
         that.css3dTag = null;
+
+        that.onBeforeRender = null; 
+    }
+
+    public forceVisibilityUpdate(cameraInitLocation?: Vector3,carCenter?: Vector3): void {
+        const that = this;
+        that.updateVisibility(cameraInitLocation,carCenter);
+    }
+
+    // Update visibility of hotspots based on current camera location.  
+    private updateVisibility(cameraInitLocation?: Vector3,carCenter?: Vector3): void {
+        if (this.disposed) return; 
+
+        const that = this; 
+
+        const cameraPosition = that.events.fire(GetCameraPosition) as Vector3; // Actual camera location. 
+        const markPosition = that.css3dTag.position;  // Actual hotspot 3D location. 
+         
+        const sideForwardDirection = new Vector3().subVectors(cameraInitLocation,carCenter).normalize();
+        const viewingHotspotDirection = new Vector3().subVectors(cameraPosition,markPosition).normalize();
+        
+        const dotProduct = Math.max(-1, Math.min(1, sideForwardDirection.dot(viewingHotspotDirection)));
+        // let compute the angle between the camera direction and the point direction in degree
+        const angle = Math.abs(Math.acos(dotProduct)* (180 / Math.PI));
+
+        fetch('/log',{
+            method:'POST',
+            headers:{'Content-Type': 'application/json'},
+            body:JSON.stringify({
+                event:'Hotspot viewdep.',
+                status:'success',
+                cameraPosition,
+                cameraInitLocation,
+                dotprod: dotProduct,
+                angle: angle,
+                hotspot: that.data.title,
+            })
+        })
+        that.css3dTag.visible = angle <= 55;
     }
 }

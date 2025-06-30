@@ -186,12 +186,13 @@ export function setupEventListener(events: Events) {
     });
 
     on(SelectPointAndLookAt, async (x: number, y: number) => {
-        if (mouseState.move) return; // 鼠标有移动时忽略
+        if (mouseState.move) return; // ignore if mouse moved
         const rs: Vector3[] = await fire(RaycasterRayIntersectPoints, x, y);
         if (rs.length) {
-            fire(CameraSetLookAt, rs[0], true, false); // 最后参数false时平移效果，true时旋转效果
+            fire(CameraSetLookAt, rs[0], true, false); // false = pan, true = rotate
         }
     });
+    
 
     on(SelectMarkPoint, async (x: number, y: number) => {
         const scene: Scene = fire(GetScene);
@@ -377,6 +378,12 @@ export function setupEventListener(events: Events) {
             if (mouseState.down === 1 && !mouseState.move && Date.now() - mouseState.downTime < 500) {
                 if (opts.markType === 'point') {
                     const point: Vector3 = await fire(SelectMarkPoint, e.clientX, e.clientY);
+                    // Or send to your vite dev server for terminal logging:
+                    fetch('/log', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ type: '2Dclicked hotspot', x: e.clientX, y: e.clientY }),
+                    });
                     if (point) {
                         const markSinglePoint = new MarkSinglePoint(events, await fire(SelectMarkPoint, e.clientX, e.clientY));
                         fire(GetScene).add(markSinglePoint);

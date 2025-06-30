@@ -594,4 +594,8 @@ export class Reall3dViewer {
         that.events.clear();
         that.events = null;
     }
+    // In Reall3dViewer.ts
+    public getEvents(): Events {
+        return this.events;
+    }
 }

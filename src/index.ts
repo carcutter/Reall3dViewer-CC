@@ -9,13 +9,19 @@ import { Reall3dViewerOptions } from './reall3d/viewer/Reall3dViewerOptions';
 import { Reall3dMapViewer } from './reall3d/mapviewer/Reall3dMapViewer';
 
 import { getCarProperties } from './reall3d/cars/CarProperties';
+import { loadHotspotsFromJSON } from './reall3d/cars/loadHotspots';
+import { IsCameraChangedNeedUpdate } from './reall3d/events/EventConstants';
+
+import { Vector3 } from 'three';
+import { MarkSinglePoint } from './reall3d/meshs/mark/MarkSinglePoint';
+import { SelectMarkPoint, GetScene } from './reall3d/events/EventConstants';
 
 const params: URLSearchParams = new URLSearchParams(location.search);
 let url = params.get('url');
 const debugMode = !!params.get('debug');
 
-const sceneID = "1C6SRFJM6MN836124_9CD678EF8C67";
-const customScenePath = `/assets/${sceneID}/vanilla_scene.spz`;
+const sceneID = "FOOBARBDX_B407451F42D6"; //"FOOBARBDX_B407451F42D6";
+const customScenePath = `/assets/${sceneID}/point_cloud_19999.spz`;
 const maxRenderCountOfPc = 384 * 10000;
 const shDegree = 3;
 
@@ -24,8 +30,21 @@ const shDegree = 3;
     // 
 const carProperties = await getCarProperties(sceneID);
 
-console.log('CarProperties', carProperties);
+const hotspotsPath = `/assets/${sceneID}/hotspots.json`;
 
+console.log('CarProperties', carProperties);
+window.addEventListener('resize', () => {
+    fetch('/log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event: 'Window resized',
+        width: window.innerWidth,
+        height: window.innerHeight,
+      }),
+    });
+  });
+  
 let viewer: Reall3dViewer;
 let mapViewer: Reall3dMapViewer;
 if (url) {
@@ -40,19 +59,32 @@ if (url) {
         autoRotate: false,
         enableRotate: true,
         enableZoom: true,
-        fov: 45,
-        minDistance: 3,
-        maxDistance: 3.5,
+        fov: carProperties.fov,
+        minDistance: 3.5,
+        maxDistance: 4.5,
         minPolarAngle: Math.PI * 0.45,
         maxPolarAngle: Math.PI * 0.51,
         lookUp: carProperties.look_up, // that's the Y-axis from the orthonormal matrix.
-        lookAt:carProperties.car_center,   // that's the computed car center. 
+        lookAt:carProperties.car_center ,   // that's the computed car center. 
         position:carProperties.cam_location_init ,  // that the stabilized cam. position for the angle 180°
     });
-    viewer.addModel(customScenePath);
+    await viewer.addModel(customScenePath);
 
-    initDevMode();
+    initDevMode(true);
 }
+await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 0.5s
+
+const markers = await loadHotspotsFromJSON(viewer, sceneID);
+
+const cameraInitLocation = new Vector3().fromArray(carProperties.cam_location_init);
+const carCenter = new Vector3().fromArray(carProperties.car_center);
+
+
+setInterval(() => {
+    markers.forEach(marker => {
+        marker.forceVisibilityUpdate(cameraInitLocation,carCenter);
+    });
+}, 100);
 
 // 以下仅开发模式使用
 function initDevMode(infoOnly = false) {
