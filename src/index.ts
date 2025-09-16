@@ -20,9 +20,9 @@ const params: URLSearchParams = new URLSearchParams(location.search);
 let url = params.get('url');
 const debugMode = !!params.get('debug');
 
-const sceneID = "FOOBARBDX_B407451F42D6"; //"FOOBARBDX_B407451F42D6";
-const customScenePath = `/assets/${sceneID}/point_cloud_19999.spz`;
-const maxRenderCountOfPc = 384 * 10000;
+const sceneID = "JT03TESTTEST_D4C0D7714EF2"
+const customScenePath = `/assets/${sceneID}/point_cloud_9999.ply`; // output_merged.ply;
+const maxRenderCountOfPc = 1000 * 10000;
 const shDegree = 3;
 
 // Read the .json file and extract car properties to: 
@@ -59,11 +59,11 @@ if (url) {
         autoRotate: false,
         enableRotate: true,
         enableZoom: true,
-        fov: carProperties.fov,
-        minDistance: 3.5,
-        maxDistance: 4.5,
-        minPolarAngle: Math.PI * 0.45,
-        maxPolarAngle: Math.PI * 0.51,
+        fov:65,//carProperties.fov,
+        minDistance:4.0,
+        maxDistance: 4.7,
+        minPolarAngle: Math.PI * 0.46,
+        maxPolarAngle: Math.PI * 0.44,
         lookUp: carProperties.look_up, // that's the Y-axis from the orthonormal matrix.
         lookAt:carProperties.car_center ,   // that's the computed car center. 
         position:carProperties.cam_location_init ,  // that the stabilized cam. position for the angle 180°
@@ -72,18 +72,20 @@ if (url) {
 
     initDevMode(true);
 }
-await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 0.5s
+await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 0.5s
 
 const markers = await loadHotspotsFromJSON(viewer, sceneID);
 
-const cameraInitLocation = new Vector3().fromArray(carProperties.cam_location_init);
 const carCenter = new Vector3().fromArray(carProperties.car_center);
 
 
+// Check for camera changes every 100ms, but only update if camera actually changed
 setInterval(() => {
-    markers.forEach(marker => {
-        marker.forceVisibilityUpdate(cameraInitLocation,carCenter);
-    });
+    if (viewer.getEvents().fire(IsCameraChangedNeedUpdate)) {
+        markers.forEach(marker => {
+            marker.forceVisibilityUpdate(carCenter);
+        });
+    }
 }, 100);
 
 // 以下仅开发模式使用

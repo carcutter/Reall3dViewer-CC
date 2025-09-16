@@ -92,13 +92,19 @@ export async function loadHotspotsFromJSON(
         }
         
         for (const [hotspotId, imageMap] of Object.entries(hotspots)) {
-            for (const [imageName, coords] of Object.entries(imageMap)) {
-                const [x, y] = coords;
+            const {name,
+                    on_view,
+                    camera_position,
+                    xy_location2D,
+                    rgb_location2D,
+                    location3D,
+                    XYZ_location3D
+                } = imageMap as any;
                 
-                const clientX = Math.round(x * scaleX);
-                const clientY = Math.round(y * scaleY);
-
-                const point = await viewer.events.fire(SelectMarkPoint, clientX, clientY) as Vector3;
+                const [x, y,z] = XYZ_location3D;
+                const point = new Vector3(x,y+0.1,z);
+                const camPosHotspot = new Vector3(...camera_position);
+                // const point = await viewer.events.fire(SelectMarkPoint, clientX, clientY) as Vector3;
                  
                 fetch('/log', {
                     method: 'POST',
@@ -107,22 +113,23 @@ export async function loadHotspotsFromJSON(
                         event: 'Hotspot 3D Point',
                         status: 'success',
                         hotspotId,
-                        imageName,
-                        coord: [clientX, clientY],
-                        point: point,
+                        hotspotName: name,
+                        imageName:on_view,
+                       
+                        hotspot3dpoint: point,
                     })
                 });
                 if (!point) {
                     continue;
                 }
-                const marker = new MarkSinglePoint(viewer.events, point, hotspotId, hotspotId);
+                const marker = new MarkSinglePoint(viewer.events, point, hotspotId, name, camPosHotspot);
                 
                 scene.add(marker);
                 marker.drawFinish();
                 
                 // Add marker to the array
                 markers.push(marker);
-            }
+            
         }
         
         return markers;

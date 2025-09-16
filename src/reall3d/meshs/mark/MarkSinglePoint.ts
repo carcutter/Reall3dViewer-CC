@@ -27,7 +27,7 @@ export class MarkSinglePoint extends Group {
     private data: MarkDataSinglePoint;
     private css3dTag: CSS3DSprite;
 
-    constructor(events: Events, obj: Vector3 | MarkDataSinglePoint, name?: string, titleOverwrite?: string) {
+    constructor(events: Events, obj: Vector3 | MarkDataSinglePoint, name?: string, titleOverwrite?: string, cameraPos?: Vector3) {
         super();
         this.events = events;
         const that = this;
@@ -47,6 +47,7 @@ export class MarkSinglePoint extends Group {
                 mainTagBackground: '#2E2E30',
                 mainTagOpacity: 0.8,
                 title: titleOverwrite || 'hotspot:' + cnt,
+                fromCameraPos: cameraPos ? [cameraPos] : undefined,
                 note: 'This is a test. ',
             };
         } else {
@@ -194,21 +195,24 @@ export class MarkSinglePoint extends Group {
         that.onBeforeRender = null; 
     }
 
-    public forceVisibilityUpdate(cameraInitLocation?: Vector3,carCenter?: Vector3): void {
+    public forceVisibilityUpdate(carCenter?: Vector3): void {
         const that = this;
-        that.updateVisibility(cameraInitLocation,carCenter);
+        that.updateVisibility(carCenter);
     }
 
     // Update visibility of hotspots based on current camera location.  
-    private updateVisibility(cameraInitLocation?: Vector3,carCenter?: Vector3): void {
+    private updateVisibility(carCenter?: Vector3): void {
         if (this.disposed) return; 
 
         const that = this; 
 
         const cameraPosition = that.events.fire(GetCameraPosition) as Vector3; // Actual camera location. 
+        //3D original camera location for this hotspot. 
+        const cameraHotspotLocation = that.data.fromCameraPos?.[0];
         const markPosition = that.css3dTag.position;  // Actual hotspot 3D location. 
          
-        const sideForwardDirection = new Vector3().subVectors(cameraInitLocation,carCenter).normalize();
+
+        const sideForwardDirection = new Vector3().subVectors(cameraHotspotLocation,carCenter).normalize();
         const viewingHotspotDirection = new Vector3().subVectors(cameraPosition,markPosition).normalize();
         
         const dotProduct = Math.max(-1, Math.min(1, sideForwardDirection.dot(viewingHotspotDirection)));
@@ -222,7 +226,7 @@ export class MarkSinglePoint extends Group {
                 event:'Hotspot viewdep.',
                 status:'success',
                 cameraPosition,
-                cameraInitLocation,
+                cameraHotspotLocation: cameraHotspotLocation?.toArray(),
                 dotprod: dotProduct,
                 angle: angle,
                 hotspot: that.data.title,

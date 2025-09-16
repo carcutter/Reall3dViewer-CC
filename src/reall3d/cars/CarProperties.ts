@@ -18,12 +18,12 @@ interface CarPropertyValues {
 
 export async function getCarProperties(sceneID: string): Promise<CarPropertyValues> {
     const carPropertiesJson = await import(`../../../assets/${sceneID}/car_metadata_viewer.json`);
-    const { look_at, look_up, init_camera_position, fov } = carPropertiesJson.default;
+    const { look_at, look_up, init_camera_position, fovY } = carPropertiesJson.default;
 
     return {
         car_center: look_at,
         look_up: look_up,
         cam_location_init: init_camera_position,
-        fov: fov
+        fov: fovY
     };
 }

@@ -2,6 +2,7 @@
 // Copyright (c) 2025 reall3d.com, MIT license
 // ==============================================
 import { MarkData } from './MarkData';
+import {  Vector3} from 'three';
 
 /**
  * 单点数据
@@ -25,4 +26,8 @@ export interface MarkDataSinglePoint extends MarkData {
     title?: string;
     /** 说明 */
     note?: string;
+
+    fromCameraPos?: Vector3[];
+
+   
 }
