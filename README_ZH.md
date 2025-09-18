@@ -19,7 +19,7 @@
 <br>
 
 ## 特点
-- [x] 支持格式: `.ply`、`.splat`、`.spx`、`.spz`
+- [x] 支持格式: `.ply`、`.splat`、`.spx`、`.spz(v2,v3)`
 - [x] 支持标注测量
 - [x] 支持文字水印
 - [x] 支持1~3级球谐系数
@@ -68,6 +68,9 @@ const splatMesh = new SplatMesh({ renderer, scene, controls});
 splatMesh.addModel({ url: 'https://reall3d.com/demo-models/yz.spx' });
 scene.add(splatMesh);
 ```
+
+## 文档(By Zread)
+- https://zread.ai/reall3d-com/Reall3dViewer
 
 
 ## TODO

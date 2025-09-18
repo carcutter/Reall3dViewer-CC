@@ -19,7 +19,7 @@
 <br>
 
 ## Features
-- [x] Support formats: `.ply`, `.splat`, `.spx`, `.spz`
+- [x] Support formats: `.ply`, `.splat`, `.spx`, `.spz(v2,v3)`
 - [x] Support mark and measurement
 - [x] Support text watermark
 - [x] Support 1st to 3rd degree spherical harmonics
@@ -61,6 +61,9 @@ const splatMesh = new SplatMesh({ renderer, scene, controls});
 splatMesh.addModel({ url: 'https://reall3d.com/demo-models/yz.spx' });
 scene.add(splatMesh);
 ```
+
+## Docs(By Zread)
+- https://zread.ai/reall3d-com/Reall3dViewer
 
 
 ## TODO

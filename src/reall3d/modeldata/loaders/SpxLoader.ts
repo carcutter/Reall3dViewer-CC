@@ -5,7 +5,7 @@ import { Vector3 } from 'three';
 import { SplatDataSize20, SplatDataSize32, SpxHeaderSize, SpxOpenFormat0, SpxExclusiveFormatReall3d } from '../../utils/consts/GlobalConstants';
 import { parseSpxBlockData, parseSpxHeader } from '../wasm/WasmParser';
 import { ModelStatus, SplatModel, SpxHeader } from '../ModelData';
-import { unGzip } from '../../utils/CommonUtils';
+import { computeCompressionRatio, DecompressGzip, DecompressXZ } from '../../utils/CommonUtils';
 
 /** Specify the Recognizable Formats Here */
 const ExclusiveFormats: number[] = [SpxOpenFormat0, SpxExclusiveFormatReall3d];
@@ -41,7 +41,8 @@ export async function loadSpx(model: SplatModel) {
         let blockSize: number = 0;
         let fetchedBlockSize: number = 0;
         let blockValues: Uint8Array[];
-        let isGzip = false;
+        let isCompress = false;
+        let compressType: number = 0; // 0:gzip, 1:xz
 
         while (true) {
             let { done, value } = await reader.read();
@@ -86,6 +87,7 @@ export async function loadSpx(model: SplatModel) {
                 }
 
                 model.header = h;
+                model.CompressionRatio = computeCompressionRatio(h.SplatCount, contentLength);
                 model.modelSplatCount = h.SplatCount;
                 model.dataShDegree = h.ShDegree;
                 model.aabbCenter = new Vector3((h.MinX + h.MaxX) / 2, (h.MinY + h.MaxY) / 2, (h.MinZ + h.MaxZ) / 2);
@@ -122,9 +124,10 @@ export async function loadSpx(model: SplatModel) {
                 blockValues = [];
                 fetchedBlockSize = 0;
 
-                const i32s = new Int32Array(ui8s.slice(0, 4).buffer);
-                isGzip = i32s[0] < 0; // 负数代表压缩
-                blockSize = Math.abs(i32s[0]); // 绝对值代表块大小
+                const i32 = new Int32Array(ui8s.slice(0, 4).buffer)[0];
+                isCompress = i32 < 0; // 负数代表压缩
+                compressType = (Math.abs(i32) >> 28) >>> 0; // 高位2~4位代表压缩方式
+                blockSize = (Math.abs(i32) << 4) >>> 4; // 低位供28位代表块数据长度
             }
 
             // 块数据不足时，暂存
@@ -137,7 +140,7 @@ export async function loadSpx(model: SplatModel) {
 
             // 解析块数据
             while (totalSize >= blockSize) {
-                let ui8sBlock = new Uint8Array(blockSize);
+                let ui8sBlock: Uint8Array = new Uint8Array(blockSize);
                 let offset = 0;
                 for (let i = 0; i < blockValues.length; i++) {
                     if (offset + blockValues[i].byteLength < blockSize) {
@@ -149,8 +152,15 @@ export async function loadSpx(model: SplatModel) {
                     }
                 }
 
-                // 解析块数据
-                isGzip && (ui8sBlock = await unGzip(ui8sBlock));
+                if (isCompress) {
+                    if (compressType === 0) {
+                        ui8sBlock = await DecompressGzip(ui8sBlock);
+                    } else if (compressType === 1) {
+                        ui8sBlock = await DecompressXZ(ui8sBlock);
+                    } else {
+                        console.error('unsuported compress type:', compressType);
+                    }
+                }
                 const spxBlock = await parseSpxBlockData(ui8sBlock);
                 if (!spxBlock.success) {
                     console.error('spx block data parser failed. block format:', spxBlock.blockFormat);
@@ -193,9 +203,10 @@ export async function loadSpx(model: SplatModel) {
                     break;
                 } else {
                     // 读取块大小，并整理供继续解析（剩余数据要么还足够多个块，要么不足得继续下载）
-                    const i32s = new Int32Array(value.slice(0, 4).buffer);
-                    blockSize = Math.abs(i32s[0]);
-                    isGzip = i32s[0] < 0;
+                    const i32 = new Int32Array(value.slice(0, 4).buffer)[0];
+                    isCompress = i32 < 0; // 负数代表压缩
+                    compressType = (Math.abs(i32) >> 28) >>> 0; // 高位2~4位代表压缩方式
+                    blockSize = (Math.abs(i32) << 4) >>> 4; // 低位供28位代表块数据长度
 
                     value = value.slice(4);
                     totalSize = value.byteLength;
