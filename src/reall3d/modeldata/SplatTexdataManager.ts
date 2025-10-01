@@ -55,6 +55,7 @@ import {
     MobileDownloadLimitSplatCount,
     PcDownloadLimitSplatCount,
 } from '../utils/consts/GlobalConstants';
+import { loadSog } from './loaders/SogLoader';
 
 /**
  * 纹理数据管理
@@ -178,13 +179,14 @@ export function setupSplatTextureManager(events: Events) {
         if (downloadDone) {
             // 已下载完，通知一次进度条
             const downloadCount = Math.min(splatModel.fetchLimit, splatModel.downloadSplatCount);
-            !splatModel.notifyFetchStopDone && (splatModel.notifyFetchStopDone = true) && fire(OnFetchStop, downloadCount);
+            downloadCount && !splatModel.notifyFetchStopDone && (splatModel.notifyFetchStopDone = true) && fire(OnFetchStop, downloadCount);
         } else {
             // 没下载完，更新下载进度条
             fire(OnFetching, (100 * splatModel.downloadSize) / splatModel.fileSize);
         }
 
-        if (!splatModel.downloadSplatCount) return; // 尚无高斯数据
+        // if (!splatModel.downloadSplatCount) return; // 尚无高斯数据
+        if (!splatModel.dataSplatCount) return; // 尚无高斯数据
 
         if (mergeRunning) return;
         mergeRunning = true;
@@ -228,6 +230,9 @@ export function setupSplatTextureManager(events: Events) {
                 ratio += splatModel.CompressionRatio;
             } else if (splatModel.opts.format == 'spz') {
                 ver = 'spz v' + splatModel.spzVersion;
+                ratio += splatModel.CompressionRatio;
+            } else if (splatModel.opts.format == 'sog') {
+                ver = 'sog v' + splatModel.sogVersion;
                 ratio += splatModel.CompressionRatio;
             } else if (splatModel.opts.format == 'splat') {
                 ratio += splatModel.CompressionRatio;
@@ -533,6 +538,8 @@ export function setupSplatTextureManager(events: Events) {
             loadPly(model);
         } else if (model.opts.format === 'spz') {
             loadSpz(model);
+        } else if (model.opts.format === 'sog') {
+            loadSog(model);
         } else {
             return false;
         }
@@ -559,16 +566,18 @@ export function setupSplatTextureManager(events: Events) {
             splatModel.fetchLimit = maxRenderCount;
         }
 
-        const startTime: number = Date.now();
         const fnCheckModelSplatCount = () => {
+            // 除非下载失败，否则总是等待继续下载，直到得知模型文件的点数为止
             if (!splatModel || splatModel.status == ModelStatus.Invalid || splatModel.status == ModelStatus.FetchFailed) {
                 return fnResolveModelSplatCount(0);
             }
-            if (splatModel.modelSplatCount >= 0) {
+            if (splatModel.modelSplatCount > 0) {
                 fnResolveModelSplatCount(splatModel.modelSplatCount);
-                !splatModel.meta.particleMode && setTimeout(() => fire(SplatMeshCycleZoom), 5);
-            } else if (Date.now() - startTime >= 3000) {
-                return fnResolveModelSplatCount(0); // 超3秒还取不到模型数量，放弃，将按配置的最大渲染数计算
+                if (!splatModel.meta.particleMode && splatModel.dataSplatCount) {
+                    setTimeout(() => fire(SplatMeshCycleZoom), 5);
+                } else {
+                    setTimeout(fnCheckModelSplatCount, 10); // 没数据可以渲染，继续做以便触发过渡效果
+                }
             } else {
                 setTimeout(fnCheckModelSplatCount, 10);
             }

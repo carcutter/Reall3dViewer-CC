@@ -7,6 +7,8 @@ import 'virtual:svg-icons-register';
 import { Reall3dViewer } from './reall3d/viewer/Reall3dViewer';
 import { Reall3dViewerOptions } from './reall3d/viewer/Reall3dViewerOptions';
 import { Reall3dMapViewer } from './reall3d/mapviewer/Reall3dMapViewer';
+import { globalEv } from './reall3d/events/SetupGlobalEV';
+import { PlaytBgAudio } from './reall3d/events/EventConstants';
 
 import { getCarProperties } from './reall3d/cars/CarProperties';
 import { loadHotspotsFromJSON } from './reall3d/cars/loadHotspots';
@@ -141,6 +143,7 @@ function fnClick(className: string) {
         viewer = viewer || new Reall3dViewer({ debugMode: true, maxRenderCountOfPc, shDegree });
         viewer.reset({ debugMode: true });
         setTimeout(() => viewer.addModel(`https://reall3d.com/demo-models/djj.spx`), 50); // Let it GC
+        globalEv.fire(PlaytBgAudio);
     } else if (className == 'demo4') {
         viewer?.dispose();
         mapViewer?.dispose();
@@ -191,18 +194,28 @@ function fnClick(className: string) {
         viewer?.options({ markMode: true, markType: 'circle' });
     } else if (className == 'add-pos') {
         viewer?.fire(2);
+        mapViewer?.fire(2);
     } else if (className == 'fly') {
         viewer?.fire(3);
+        mapViewer?.fire(3);
     } else if (className == 'clear-pos') {
         viewer?.fire(4);
+        mapViewer?.fire(4);
     } else if (className == 'fly-save') {
         viewer?.fire(5);
+        mapViewer?.fire(5);
     } else if (className == 'add-sh') {
         viewer?.fire(8, 1);
     } else if (className == 'default-sh') {
         viewer?.fire(8);
     } else if (className == 'sub-sh') {
         viewer?.fire(8, -1);
+    } else if (className == 'add-quality') {
+        viewer?.fire(9, 1);
+    } else if (className == 'default-quality') {
+        viewer?.fire(9);
+    } else if (className == 'sub-quality') {
+        viewer?.fire(9, -1);
     } else if (className == 'map') {
         viewer?.dispose();
         mapViewer?.dispose();

@@ -61,6 +61,7 @@ import {
     SplatUpdateFlagValue,
     OnLoadAndRenderObj,
     GetMetaMatrix,
+    UpdateQualityLevel,
 } from '../events/EventConstants';
 import { SplatMesh } from '../meshs/splatmesh/SplatMesh';
 import { ModelOptions } from '../modeldata/ModelOptions';
@@ -164,6 +165,11 @@ export class Reall3dViewer {
         scene.add(that.splatMesh);
         setupControlPlane(events);
 
+        on(UpdateQualityLevel, (qualityLevel: number) => {
+            opts.qualityLevel = qualityLevel;
+            that.splatMesh.options({ qualityLevel, renderer: undefined, scene: undefined });
+        });
+
         scene.add(new AmbientLight('#ffffff', 2));
         renderer.setAnimationLoop(that.update.bind(that));
 
@@ -228,7 +234,7 @@ export class Reall3dViewer {
             let file = e.dataTransfer.files[0];
             if (!file) return;
 
-            let format: 'ply' | 'splat' | 'spx' | 'spz' | 'obj';
+            let format: 'ply' | 'splat' | 'spx' | 'spz' | 'sog' | 'obj';
             let isSceneJson = false;
             if (file.name.endsWith('.spx')) {
                 format = 'spx';
@@ -238,6 +244,8 @@ export class Reall3dViewer {
                 format = 'ply';
             } else if (file.name.endsWith('.spz')) {
                 format = 'spz';
+            } else if (file.name.endsWith('.sog')) {
+                format = 'sog';
             } else if (file.name.endsWith('.obj')) {
                 format = 'obj';
             } else if (file.name.endsWith('.scene.json')) {
@@ -252,6 +260,8 @@ export class Reall3dViewer {
             opts.pointcloudMode = true;
             opts.debugMode = true;
             opts.autoRotate = format !== 'obj';
+            opts.maxRenderCountOfPc = 1024 * 10000;
+            opts.qualityLevel = 9; // 按最高级渲染质量设置
             that.reset(opts);
             if (isSceneJson) {
                 await that.addScene(url);
@@ -293,6 +303,14 @@ export class Reall3dViewer {
                 if (p1) shDegree = that.splatMesh.fire(GetCurrentDisplayShDegree) + p1;
                 that.splatMesh.fire(SplatUpdateShDegree, shDegree);
             })();
+        }
+        if (n === 9) {
+            if (!p1) {
+                that.events.fire(UpdateQualityLevel, 8);
+            } else {
+                const level: number = (that.events.fire(GetOptions) as Reall3dViewerOptions).qualityLevel;
+                that.events.fire(UpdateQualityLevel, Math.max(1, Math.min(level + p1, 9)));
+            }
         }
     }
 
@@ -468,6 +486,8 @@ export class Reall3dViewer {
                 modelOpts.format = 'ply';
             } else if (modelOpts.url.endsWith('.spz')) {
                 modelOpts.format = 'spz';
+            } else if (modelOpts.url.endsWith('.sog') || modelOpts.url.endsWith('/meta.json') || modelOpts.url == 'meta.json') {
+                modelOpts.format = 'sog';
             } else if (modelOpts.url.endsWith('.obj')) {
                 modelOpts.format = 'obj';
             } else {

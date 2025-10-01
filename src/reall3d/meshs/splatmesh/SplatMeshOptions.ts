@@ -81,4 +81,9 @@ export interface SplatMeshOptions {
      * Enable depth testing; defaults to true
      */
     depthTest?: boolean;
+
+    /**
+     * Render quality level (1~9, default to 8)
+     */
+    qualityLevel?: number;
 }

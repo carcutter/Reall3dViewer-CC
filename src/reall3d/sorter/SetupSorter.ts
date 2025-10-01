@@ -2,8 +2,17 @@
 // Copyright (c) 2025 reall3d.com, MIT license
 // ==============================================
 import { Events } from '../events/Events';
-import { GetWorker, WorkerSort, WorkerDispose, GetViewProjectionMatrixArray, GetMaxRenderCount, IsBigSceneMode } from '../events/EventConstants';
-import { WkInit, WkIsBigSceneMode, WkMaxRenderCount, WkViewProjection } from '../utils/consts/WkConstants';
+import {
+    GetWorker,
+    WorkerSort,
+    WorkerDispose,
+    GetViewProjectionMatrixArray,
+    GetMaxRenderCount,
+    IsBigSceneMode,
+    GetRenderQualityLevel,
+    WorkerUpdateQualityLevel,
+} from '../events/EventConstants';
+import { WkInit, WkIsBigSceneMode, WkMaxRenderCount, WkQualityLevel, WkUpdateParams, WkViewProjection } from '../utils/consts/WkConstants';
 
 export function setupSorter(events: Events) {
     const on = (key: number, fn?: Function, multiFn?: boolean): Function | Function[] => events.on(key, fn, multiFn);
@@ -13,8 +22,14 @@ export function setupSorter(events: Events) {
     on(GetWorker, () => worker);
     on(WorkerSort, () => worker.postMessage({ [WkViewProjection]: fire(GetViewProjectionMatrixArray) }));
     on(WorkerDispose, () => worker.terminate());
+    on(WorkerUpdateQualityLevel, () => worker.postMessage({ [WkUpdateParams]: true, [WkQualityLevel]: fire(GetRenderQualityLevel) }));
 
     (async () => {
-        worker.postMessage({ [WkInit]: true, [WkMaxRenderCount]: await fire(GetMaxRenderCount), [WkIsBigSceneMode]: fire(IsBigSceneMode) });
+        worker.postMessage({
+            [WkInit]: true,
+            [WkMaxRenderCount]: await fire(GetMaxRenderCount),
+            [WkIsBigSceneMode]: fire(IsBigSceneMode),
+            [WkQualityLevel]: fire(GetRenderQualityLevel),
+        });
     })();
 }

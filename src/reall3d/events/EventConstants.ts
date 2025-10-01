@@ -422,3 +422,25 @@ export const TweenFlyOnce = i++;
 export const TweenFlyEnable = i++;
 /** 禁止相机飞行控制 */
 export const TweenFlyDisable = i++;
+/** 飞行暂停 */
+export const FlyingPause = i++;
+/** 飞行继续 */
+export const FlyingContinue = i++;
+/** 飞行播放 */
+export const FlyingPlay = i++;
+/** 取设定的渲染质量级别(1~9) */
+export const GetRenderQualityLevel = i++;
+/** 更新渲染质量级别 */
+export const UpdateQualityLevel = i++;
+/** 更新渲染质量级别 */
+export const WorkerUpdateQualityLevel = i++;
+
+// 以下全局单例事件对象使用
+/** 取背景音乐对象 */
+export const GetBgAudio = i++;
+/** 播放背景音乐 */
+export const PlaytBgAudio = i++;
+/** 背景音乐音量渐进调小 */
+export const SetBgAudioVolumeDown = i++;
+/** 背景音乐音量渐进调大 */
+export const SetBgAudioVolumeUp = i++;
