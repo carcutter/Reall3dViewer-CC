@@ -182,7 +182,7 @@ export function initCamera(opts: Reall3dViewerOptions): PerspectiveCamera {
     let camera = opts.camera;
     if (!camera) {
         const canvas: HTMLCanvasElement = opts.renderer.domElement;
-        const aspect = canvas.width / canvas.height;
+        const aspect = canvas.width / canvas.height; ///3840/2160;//
     
         let lookUp: Vector3 = new Vector3().fromArray(opts.lookUp);
         let lookAt: Vector3 = new Vector3().fromArray(opts.lookAt);
@@ -192,7 +192,17 @@ export function initCamera(opts: Reall3dViewerOptions): PerspectiveCamera {
         camera.position.copy(position);
         camera.up.copy(lookUp).normalize();
         camera.lookAt(lookAt);
+
+        camera.updateMatrixWorld();
+        camera.updateProjectionMatrix();
+
         opts.camera = camera;
+       
+        fetch('/log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ camera_aspect: camera.aspect })
+        });
     }
     return opts.camera;
 }

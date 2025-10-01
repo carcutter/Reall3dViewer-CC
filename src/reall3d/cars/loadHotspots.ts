@@ -4,7 +4,7 @@
 
 import { Vector3, Scene } from 'three';
 import { MarkSinglePoint } from '../meshs/mark/MarkSinglePoint';
-import { SelectMarkPoint, GetScene, GetCanvas, GetCanvasSize } from '../events/EventConstants';
+import { SelectMarkPoint, GetScene,GetCamera, GetCanvas, GetCanvasSize } from '../events/EventConstants';
 import { Reall3dViewer } from '../viewer/Reall3dViewer';
 import {IsCameraChangedNeedUpdate} from '../events/EventConstants';
 interface HotspotsJSON {
@@ -30,7 +30,7 @@ export async function loadHotspotsFromJSON(
     const markers: MarkSinglePoint[] = [];
     
     try {
-        const hotspotsPath = `/assets/${sceneID}/hotspots.json`;
+        const hotspotsPath = `/assets/${sceneID}/hotspots_metadata.json`;
 
         console.log(`[loadHotspotsFromJSON] Loading hotspots from: ${hotspotsPath}`);
 
@@ -81,7 +81,22 @@ export async function loadHotspotsFromJSON(
         const windowHeight = window.innerHeight;
         const viewerElement = document.getElementById('gsviewer');
         const { width, height, top, left } = viewerElement.getBoundingClientRect();
-
+        // print the window size with the fetch log 
+        fetch('/log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                event: 'Hotspots Window Size',
+                status: 'success',
+                windowWidth,
+                windowHeight,
+                viewerWidth: width,
+                viewerHeight: height,
+                viewerTop: top,
+                viewerLeft: left,
+            })
+        });
+       
         const scaleX = windowWidth / originalResolution.width;
         const scaleY = windowHeight / (originalResolution.height);  
 
@@ -100,12 +115,27 @@ export async function loadHotspotsFromJSON(
                     location3D,
                     XYZ_location3D
                 } = imageMap as any;
-                
+
+                //XYZ_location3D[0] = XYZ_location3D[0] * scaleX;
+                //XYZ_location3D[1] = XYZ_location3D[1] * scaleY;
+
                 const [x, y,z] = XYZ_location3D;
-                const point = new Vector3(x,y+0.1,z);
+                const point = new Vector3(x,y,z);
                 const camPosHotspot = new Vector3(...camera_position);
+
+                
                 // const point = await viewer.events.fire(SelectMarkPoint, clientX, clientY) as Vector3;
-                 
+                
+                const camera = viewer.events.fire(GetCamera) as PerspectiveCamera;
+                // project XYZ_location3D on 2D image space (u,v)
+                const pointProjected = point.clone().project(camera);
+                // pointProjected is normalized device coordinates (NDC) with range [-1, 1]
+                // convert to pixel coordinates (u,v)
+                pointProjected.x = (pointProjected.x + 1) * width / 2;
+                pointProjected.y = -(pointProjected.y - 1) * height / 2;
+
+                //
+                //const pointProjected = point.clone().project(camera);
                 fetch('/log', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -115,7 +145,7 @@ export async function loadHotspotsFromJSON(
                         hotspotId,
                         hotspotName: name,
                         imageName:on_view,
-                       
+                        pointProjected: pointProjected,
                         hotspot3dpoint: point,
                     })
                 });

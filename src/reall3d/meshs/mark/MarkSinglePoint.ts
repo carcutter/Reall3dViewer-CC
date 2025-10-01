@@ -73,7 +73,7 @@ export class MarkSinglePoint extends Group {
 
         const tagWarp: HTMLDivElement = document.createElement('div');
         tagWarp.innerHTML = `<div style='flex-direction: column;align-items: center;display: flex;pointer-events: none;margin-bottom: 40px;'>
-                                <span class="${data.name}" style="color:${data.mainTagColor};background:${data.mainTagBackground};opacity:${data.mainTagOpacity};padding:1px 5px 2px 5px;border-radius: 4px;margin-bottom: 5px;user-select: none;font-size: 6px;pointer-events: auto;">${data.title}</span>
+                                <span class="${data.name}" style="color:${data.mainTagColor};background:${data.mainTagBackground};opacity:${data.mainTagOpacity};padding:1px 5px 2px 5px;border-radius: 4px;margin-bottom: 5px;user-select: none;font-size: 5px;pointer-events: auto;">${data.title}</span>
                                 <svg height="20" width="20" style="color:${data.iconColor};opacity:${data.iconOpacity};"><use href="${data.iconName}" fill="currentColor" /></svg>
                              </div>`;
         tagWarp.classList.add('mark-wrap-point', `mark-wrap-${data.name}`);

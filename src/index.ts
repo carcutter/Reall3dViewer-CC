@@ -20,9 +20,9 @@ const params: URLSearchParams = new URLSearchParams(location.search);
 let url = params.get('url');
 const debugMode = !!params.get('debug');
 
-const sceneID = "JT03TESTTEST_D4C0D7714EF2"
-const customScenePath = `/assets/${sceneID}/point_cloud_9999.ply`; // output_merged.ply;
-const maxRenderCountOfPc = 1000 * 10000;
+const sceneID = "204RC1EG2KR751586_80118E1B6E3E"
+const customScenePath = `/assets/${sceneID}/point_cloud_9999.spz`; // output_merged.ply;
+const maxRenderCountOfPc = 512 * 10000;
 const shDegree = 3;
 
 // Read the .json file and extract car properties to: 
@@ -54,16 +54,19 @@ if (url) {
 } else {
     viewer = new Reall3dViewer({
         debugMode: true,
+        bigSceneMode:false,
         maxRenderCountOfPc: maxRenderCountOfPc,
         shDegree: shDegree,
         autoRotate: false,
         enableRotate: true,
         enableZoom: true,
-        fov:65,//carProperties.fov,
-        minDistance:4.0,
-        maxDistance: 4.7,
-        minPolarAngle: Math.PI * 0.46,
-        maxPolarAngle: Math.PI * 0.44,
+        fov:70,//carProperties.fov,
+        near: 0.010,
+        far: 100.0,
+        pointcloudMode:true,
+        //minDistance:4.5,
+        //minPolarAngle: Math.PI * 0.48,
+        //maxPolarAngle: Math.PI * 0.42,
         lookUp: carProperties.look_up, // that's the Y-axis from the orthonormal matrix.
         lookAt:carProperties.car_center ,   // that's the computed car center. 
         position:carProperties.cam_location_init ,  // that the stabilized cam. position for the angle 180°
@@ -74,19 +77,19 @@ if (url) {
 }
 await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 0.5s
 
-const markers = await loadHotspotsFromJSON(viewer, sceneID);
+//const markers = await loadHotspotsFromJSON(viewer, sceneID);
 
-const carCenter = new Vector3().fromArray(carProperties.car_center);
+//const carCenter = new Vector3().fromArray(carProperties.car_center);
 
 
 // Check for camera changes every 100ms, but only update if camera actually changed
-setInterval(() => {
-    if (viewer.getEvents().fire(IsCameraChangedNeedUpdate)) {
-        markers.forEach(marker => {
-            marker.forceVisibilityUpdate(carCenter);
-        });
-    }
-}, 100);
+//setInterval(() => {
+//    if (viewer.getEvents().fire(IsCameraChangedNeedUpdate)) {
+  //      markers.forEach(marker => {
+    //        marker.forceVisibilityUpdate(carCenter);
+      //  });
+    //}
+//}, 100);
 
 // 以下仅开发模式使用
 function initDevMode(infoOnly = false) {
