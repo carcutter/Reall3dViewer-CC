@@ -57,6 +57,7 @@ if (url) {
     viewer = new Reall3dViewer({
         debugMode: true,
         bigSceneMode:false,
+        qualityLevel:9,
         maxRenderCountOfPc: maxRenderCountOfPc,
         shDegree: shDegree,
         autoRotate: false,
@@ -79,19 +80,19 @@ if (url) {
 }
 await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 0.5s
 
-//const markers = await loadHotspotsFromJSON(viewer, sceneID);
+const markers = await loadHotspotsFromJSON(viewer, sceneID);
 
-//const carCenter = new Vector3().fromArray(carProperties.car_center);
+const carCenter = new Vector3().fromArray(carProperties.car_center);
 
 
 // Check for camera changes every 100ms, but only update if camera actually changed
-//setInterval(() => {
-//    if (viewer.getEvents().fire(IsCameraChangedNeedUpdate)) {
-  //      markers.forEach(marker => {
-    //        marker.forceVisibilityUpdate(carCenter);
-      //  });
-    //}
-//}, 100);
+setInterval(() => {
+    if (viewer.getEvents().fire(IsCameraChangedNeedUpdate)) {
+      markers.forEach(marker => {
+        marker.forceVisibilityUpdate(carCenter);
+  });
+}
+}, 100);
 
 // 以下仅开发模式使用
 function initDevMode(infoOnly = false) {
